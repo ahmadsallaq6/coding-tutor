@@ -1,0 +1,681 @@
+{% extends "base.html" %}
+
+{% block title %}CodeBuddy - Coding Practice{% endblock %}
+
+{% block extra_css %}
+<style>
+.main-container {
+    display: flex;
+    height: calc(100vh - 76px);
+    padding: 20px;
+    gap: 20px;
+    background-color: #1a1a1a;
+    color: #ffffff;
+    overflow: hidden;
+}
+
+.left-panel {
+    flex: 3;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    min-width: 0;
+    height: 100%;
+    overflow: hidden;
+}
+
+.right-panel {
+    flex: 1;
+    background-color: #2d2d2d;
+    border-radius: 10px;
+    padding: 20px;
+    overflow-y: auto;
+    min-width: 300px;
+    margin-right: 20px;
+}
+
+.code-section {
+    background-color: #2d2d2d;
+    border-radius: 10px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    margin-bottom: 20px;
+}
+
+.code-editor {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    margin-top: 10px;
+}
+
+.CodeMirror {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 100% !important;
+    font-family: 'Fira Code', monospace;
+    border-radius: 5px;
+}
+
+.chat-section {
+    background-color: #2d2d2d;
+    border-radius: 10px;
+    padding: 20px;
+    height: 300px;
+    display: flex;
+    flex-direction: column;
+    min-height: 300px;
+    max-height: 300px;
+    margin-right: 20px;
+}
+
+.chat-messages {
+    flex-grow: 1;
+    overflow-y: auto;
+    margin-bottom: 15px;
+    padding: 10px;
+    min-height: 0;
+}
+
+.chat-message {
+    margin-bottom: 15px;
+    padding: 12px;
+    border-radius: 8px;
+    max-width: 85%;
+    white-space: pre-wrap;
+    font-size: 14px;
+}
+
+.chat-message code {
+    display: block;
+    background-color: #1a1a1a;
+    padding: 10px;
+    border-radius: 5px;
+    margin: 8px 0;
+    font-family: 'Fira Code', monospace;
+    white-space: pre;
+    overflow-x: auto;
+}
+
+.user-message {
+    background-color: #2962ff;
+    color: white;
+    margin-left: auto;
+}
+
+.ai-message {
+    background-color: #1e1e1e;
+    color: #ffffff;
+    margin-right: auto;
+}
+
+.code-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.code-header h2 {
+    margin: 0;
+    color: #ffffff;
+}
+
+.submit-btn {
+    background-color: #00a67d;
+    color: white;
+    border: none;
+    padding: 6px 16px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    font-size: 14px;
+    align-self: flex-end;
+}
+
+.submit-btn:hover {
+    background-color: #008f6b;
+}
+
+.chat-input-container {
+    display: flex;
+    gap: 10px;
+    padding: 10px;
+    background-color: #1e1e1e;
+    border-radius: 5px;
+}
+
+.chat-input {
+    flex-grow: 1;
+    background-color: #1e1e1e;
+    border: 1px solid #404040;
+    border-radius: 5px;
+    padding: 10px;
+    color: #ffffff;
+}
+
+.send-btn {
+    background-color: #2962ff;
+    color: white;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.send-btn:hover {
+    background-color: #1e4bd8;
+}
+
+.progress-section {
+    margin-bottom: 30px;
+}
+
+.progress-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.trophy-icon {
+    color: #ffd700;
+    font-size: 24px;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.stat-card {
+    background-color: #1e1e1e;
+    padding: 15px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.stat-value {
+    font-size: 24px;
+    font-weight: bold;
+    margin: 5px 0;
+}
+
+.achievements-section h3 {
+    margin-bottom: 15px;
+}
+
+.achievement-item {
+    background-color: #1e1e1e;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.achievement-icon {
+    color: #ffd700;
+}
+
+.feedback-section {
+    background-color: #2d2d2d;
+    border-radius: 10px;
+    padding: 20px;
+    margin-top: 20px;
+    overflow-y: auto;
+    max-height: calc(100vh - 500px);
+    margin-right: 20px;
+}
+
+.assessment-result {
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    display: none;
+}
+
+.assessment-correct {
+    background-color: #1b5e20;
+    color: white;
+}
+
+.assessment-incorrect {
+    background-color: #b71c1c;
+    color: white;
+}
+
+.feedback-content {
+    margin-top: 15px;
+    padding: 15px;
+    background-color: #1e1e1e;
+    border-radius: 8px;
+}
+
+.solution-steps {
+    margin-top: 15px;
+    padding: 15px;
+    background-color: #1e1e1e;
+    border-radius: 8px;
+    display: none;
+}
+
+.right-code {
+    margin-top: 15px;
+    padding: 15px;
+    background-color: #1e1e1e;
+    border-radius: 8px;
+    display: none;
+}
+
+.right-code pre {
+    background-color: #000;
+    padding: 10px;
+    border-radius: 5px;
+    overflow-x: auto;
+    margin-top: 10px;
+}
+
+.challenge-description {
+    background-color: #1e1e1e;
+    padding: 15px;
+    border-radius: 5px;
+    color: #ffffff;
+    font-size: 14px;
+    margin-bottom: 10px;
+    max-height: 100px;
+    overflow-y: auto;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="main-container">
+    <div class="left-panel">
+        <div class="code-section">
+            <div class="code-header">
+                <div>
+                    <h3 id="challengeTitle" class="mb-2">Current Challenge</h3>
+
+                </div>
+                <div class="d-flex justify-content-end">
+                    <button class="submit-btn">Submit Solution</button>
+                </div>
+            </div>
+            <div class="code-editor">
+                <textarea id="codeEditor">def solution():
+    # Write your solution here
+    pass</textarea>
+            </div>
+        </div>
+        <div class="chat-section">
+            <div class="chat-messages" id="chatMessages">
+                <!-- Messages will be added here dynamically -->
+            </div>
+            <div class="chat-input-container">
+                <input type="text" class="chat-input" placeholder="Ask a coding question...">
+                <button class="send-btn">Send</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="right-panel">
+        <div class="progress-section">
+            <div class="progress-header">
+                <span class="trophy-icon">🏆</span>
+                <h2>Your Progress</h2>
+            </div>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalChallenges">0</div>
+                    <div>Total Challenges</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="correctSolutions">0</div>
+                    <div>Correct Solutions</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="incorrectSolutions">0</div>
+                    <div>Incorrect Solutions</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="currentStreak">0</div>
+                    <div>Current Streak</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="achievements-section">
+            <h3>Recent Achievements</h3>
+            <div class="achievement-item">
+                <span class="achievement-icon">🏆</span>
+                <div>Python Beginner</div>
+            </div>
+            <div class="achievement-item">
+                <span class="achievement-icon">🏆</span>
+                <div>JavaScript Basics Mastered</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="feedback-section">
+    <h4>Assessment & Feedback</h4>
+    
+    <!-- Assessment Result -->
+    <div id="assessmentResult" class="assessment-result">
+        <h5 id="assessmentTitle"></h5>
+        <p id="assessmentMessage"></p>
+        
+        <div id="feedbackContent" class="feedback-content">
+            <h6>Detailed Feedback:</h6>
+            <p id="feedbackText"></p>
+        </div>
+        
+        <div id="solutionSteps" class="solution-steps">
+            <h6>Step-by-Step Solution:</h6>
+            <div id="solutionText"></div>
+        </div>
+        
+        <div id="rightCode" class="right-code">
+            <h6>Correct Solution:</h6>
+            <div id="rightCodeText"></div>
+        </div>
+        
+        <div class="mt-3">
+            <button id="tryAgainBtn" class="btn btn-light" style="display: none;">Try Again</button>
+            <button id="showSolutionBtn" class="btn btn-info" style="display: none;">Show Solution</button>
+            <button id="showRightCodeBtn" class="btn btn-warning" style="display: none;">Show Correct Code</button>
+            <button id="nextChallengeBtn" class="btn btn-success" style="display: none;">Next Challenge</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentChallengeId = 'challenge_1'; // Default to first challenge
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Initialize CodeMirror
+    const editor = CodeMirror.fromTextArea(document.getElementById('codeEditor'), {
+        mode: 'python',
+        theme: 'monokai',
+        lineNumbers: true,
+        autoCloseBrackets: true,
+        matchBrackets: true,
+        indentUnit: 4,
+        tabSize: 4,
+        indentWithTabs: false,
+        extraKeys: {"Tab": "indentMore", "Shift-Tab": "indentLess"}
+    });
+
+    // Handle chat submission
+    const chatInput = document.querySelector('.chat-input');
+    const sendButton = document.querySelector('.send-btn');
+
+    function formatMessage(text) {
+        // Use marked.js to parse markdown
+        const formattedText = marked.parse(text, {
+            gfm: true,
+            breaks: true,
+            highlight: function(code, language) {
+                if (language && Prism.languages[language]) {
+                    return Prism.highlight(code, Prism.languages[language], language);
+                }
+                return code;
+            }
+        });
+        
+        return formattedText;
+    }
+
+    function addMessageToChat(message, isUser) {
+        const chatMessages = document.getElementById('chatMessages');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `chat-message ${isUser ? 'user-message' : 'ai-message'}`;
+        
+        // Format message if it's from AI
+        if (!isUser) {
+            messageDiv.innerHTML = formatMessage(message);
+            // Highlight any code blocks
+            messageDiv.querySelectorAll('pre code').forEach((block) => {
+                Prism.highlightElement(block);
+            });
+        } else {
+            messageDiv.textContent = message;
+        }
+        
+        chatMessages.appendChild(messageDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    async function sendMessage() {
+        const message = chatInput.value.trim();
+        if (!message) return;
+
+        // Disable input and button while processing
+        chatInput.disabled = true;
+        sendButton.disabled = true;
+
+        // Add user message to chat
+        addMessageToChat(message, true);
+        chatInput.value = '';
+
+        try {
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({ message })
+            });
+
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+
+            const data = await response.json();
+            
+            // Add the AI response to chat if it exists
+            if (data.response) {
+                addMessageToChat(data.response, false);
+                
+                // Check if this is a challenge response
+                if (data.challenge) {
+                    currentChallengeId = data.challenge.id;
+                    document.getElementById('challengeTitle').textContent = data.challenge.title;
+                    document.getElementById('challengeDescription').textContent = data.challenge.description;
+                    editor.setValue(data.challenge.template || 'def solution():\n    # Write your solution here\n    pass');
+                }
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            // Only show error message if we haven't already shown a response
+            if (!document.querySelector('.ai-message:last-child')) {
+                addMessageToChat('Sorry, there was a network error. Please try again.', false);
+            }
+        } finally {
+            // Re-enable input and button
+            chatInput.disabled = false;
+            sendButton.disabled = false;
+            chatInput.focus();
+        }
+    }
+
+    sendButton.addEventListener('click', sendMessage);
+    chatInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+
+    // Handle code submission
+    const submitButton = document.querySelector('.submit-btn');
+    submitButton.addEventListener('click', async () => {
+        const code = editor.getValue();
+        
+        try {
+            // Show loading state
+            submitButton.disabled = true;
+            submitButton.textContent = 'Evaluating...';
+            
+            const response = await fetch('/api/submit-solution', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({
+                    code: code,
+                    challenge_id: currentChallengeId
+                })
+            });
+
+            const data = await response.json();
+            
+            if (response.ok) {
+                if (data.status === 'success') {
+                    showAssessmentResult(data);
+                } else {
+                    showError(data.message || 'An error occurred during evaluation');
+                }
+            } else {
+                throw new Error(data.message || 'Failed to submit solution');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showError(error.message || 'An error occurred while submitting your solution');
+        } finally {
+            submitButton.disabled = false;
+            submitButton.textContent = 'Submit Solution';
+        }
+    });
+
+    function showError(message) {
+        const assessmentResult = document.getElementById('assessmentResult');
+        const assessmentTitle = document.getElementById('assessmentTitle');
+        const assessmentMessage = document.getElementById('assessmentMessage');
+        const feedbackText = document.getElementById('feedbackText');
+        
+        assessmentResult.style.display = 'block';
+        assessmentResult.className = 'assessment-result assessment-incorrect';
+        
+        assessmentTitle.textContent = 'Error';
+        assessmentMessage.textContent = message;
+        feedbackText.textContent = 'Please try again.';
+    }
+
+    function showAssessmentResult(data) {
+        const assessmentResult = document.getElementById('assessmentResult');
+        const assessmentTitle = document.getElementById('assessmentTitle');
+        const assessmentMessage = document.getElementById('assessmentMessage');
+        const feedbackText = document.getElementById('feedbackText');
+        const solutionSteps = document.getElementById('solutionSteps');
+        const solutionText = document.getElementById('solutionText');
+        const rightCode = document.getElementById('rightCode');
+        const rightCodeText = document.getElementById('rightCodeText');
+        const tryAgainBtn = document.getElementById('tryAgainBtn');
+        const showSolutionBtn = document.getElementById('showSolutionBtn');
+        const showRightCodeBtn = document.getElementById('showRightCodeBtn');
+        const nextChallengeBtn = document.getElementById('nextChallengeBtn');
+        
+        // Reset previous state
+        assessmentResult.style.display = 'block';
+        solutionSteps.style.display = 'none';
+        rightCode.style.display = 'none';
+        tryAgainBtn.style.display = 'none';
+        showSolutionBtn.style.display = 'none';
+        showRightCodeBtn.style.display = 'none';
+        nextChallengeBtn.style.display = 'none';
+        
+        // Set assessment class
+        assessmentResult.className = 'assessment-result ' + 
+            (data.is_correct ? 'assessment-correct' : 'assessment-incorrect');
+        
+        // Set content
+        assessmentTitle.textContent = data.is_correct ? 'Assessment Correct!' : 'Assessment Incorrect';
+        assessmentMessage.textContent = data.message;
+        feedbackText.textContent = data.feedback;
+        
+        if (data.is_correct) {
+            nextChallengeBtn.style.display = 'inline-block';
+        } else {
+            tryAgainBtn.style.display = 'inline-block';
+            if (data.step_by_step_solution) {
+                showSolutionBtn.style.display = 'inline-block';
+                solutionText.innerHTML = marked.parse(data.step_by_step_solution);
+            }
+            if (data.right_code) {
+                showRightCodeBtn.style.display = 'inline-block';
+                rightCodeText.innerHTML = `<pre><code class="language-python">${data.right_code}</code></pre>`;
+                // Trigger Prism to highlight the code
+                Prism.highlightElement(rightCodeText.querySelector('code'));
+            }
+        }
+    }
+
+    // Handle try again button
+    document.getElementById('tryAgainBtn').addEventListener('click', () => {
+        document.getElementById('assessmentResult').style.display = 'none';
+    });
+
+    // Handle show solution button
+    document.getElementById('showSolutionBtn').addEventListener('click', () => {
+        const solutionSteps = document.getElementById('solutionSteps');
+        solutionSteps.style.display = solutionSteps.style.display === 'none' ? 'block' : 'none';
+    });
+
+    // Handle show right code button
+    document.getElementById('showRightCodeBtn').addEventListener('click', () => {
+        const rightCode = document.getElementById('rightCode');
+        rightCode.style.display = rightCode.style.display === 'none' ? 'block' : 'none';
+    });
+
+    // Handle next challenge button
+    document.getElementById('nextChallengeBtn').addEventListener('click', () => {
+        // Refresh the page to allow user to ask for a new challenge
+        window.location.reload();
+    });
+});
+
+async function updateProgress() {
+    try {
+        const response = await fetch('/api/user_progress');
+        const data = await response.json();
+        
+        if (response.ok) {
+            document.getElementById('totalChallenges').textContent = data.challenges_attempted;
+            document.getElementById('correctSolutions').textContent = data.correct_solutions;
+            document.getElementById('incorrectSolutions').textContent = data.incorrect_solutions;
+            document.getElementById('currentStreak').textContent = data.current_streak;
+        }
+    } catch (error) {
+        console.error('Error fetching progress:', error);
+    }
+}
+
+// Update progress when page loads
+document.addEventListener('DOMContentLoaded', updateProgress);
+
+// Update progress after submitting a solution
+const originalHandleSubmit = handleSubmit;
+handleSubmit = async function(...args) {
+    await originalHandleSubmit.apply(this, args);
+    await updateProgress();
+};
+</script>
+{% endblock %} 

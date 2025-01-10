@@ -1,0 +1,306 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - CodeBuddy{% endblock %}
+
+{% block extra_css %}
+<style>
+.dashboard-container {
+    height: calc(100vh - 100px);
+    margin-top: 20px;
+}
+
+.chat-section {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-messages {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 5px;
+}
+
+.message {
+    margin-bottom: 15px;
+    padding: 10px;
+    border-radius: 5px;
+}
+
+.user-message {
+    background: #007bff;
+    color: white;
+    margin-left: 20%;
+}
+
+.ai-message {
+    background: #e9ecef;
+    margin-right: 20%;
+}
+
+.code-editor {
+    height: 100%;
+}
+
+.CodeMirror {
+    height: calc(100% - 50px) !important;
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+}
+
+.feedback-section {
+    height: 100%;
+    overflow-y: auto;
+}
+
+.progress-card {
+    margin-bottom: 15px;
+}
+
+.challenge-status {
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 5px;
+}
+
+.status-success {
+    background-color: #d4edda;
+    border-color: #c3e6cb;
+    color: #155724;
+}
+
+.status-error {
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+    color: #721c24;
+}
+
+.loading {
+    display: none;
+    text-align: center;
+    padding: 20px;
+}
+
+.loading.active {
+    display: block;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="row h-100">
+        <!-- Chat Section -->
+        <div class="col-md-4">
+            <div class="chat-section">
+                <h4>Chat with AI</h4>
+                <div class="chat-messages" id="chatMessages"></div>
+                <div class="mt-3">
+                    <form id="chatForm" class="d-flex">
+                        <input type="text" class="form-control me-2" id="messageInput" placeholder="Type your message...">
+                        <button type="submit" class="btn btn-primary">Send</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Code Editor Section -->
+        <div class="col-md-4">
+            <div class="code-editor">
+                <h4>Code Editor</h4>
+                <select class="form-select mb-2" id="languageSelect">
+                    <option value="python">Python</option>
+                    <option value="javascript">JavaScript</option>
+                </select>
+                <textarea id="codeEditor"></textarea>
+                <div class="btn-group mt-2" role="group">
+                    <button class="btn btn-secondary" id="clearCode">Clear</button>
+                    <button class="btn btn-primary" id="runCode">Run</button>
+                    <button class="btn btn-success" id="submitSolution">Submit</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Feedback Section -->
+        <div class="col-md-4">
+            <div class="feedback-section">
+                <h4>Progress & Feedback</h4>
+                
+                <!-- Progress Stats -->
+                <div class="card progress-card">
+                    <div class="card-body">
+                        <h5 class="card-title">Your Progress</h5>
+                        <div class="row">
+                            <div class="col-6">
+                                <p>Challenges Attempted: <span id="challengesAttempted">{{ user.progress.challenges_attempted }}</span></p>
+                                <p>Correct Solutions: <span id="correctSolutions">{{ user.progress.correct_solutions }}</span></p>
+                            </div>
+                            <div class="col-6">
+                                <p>Success Rate: <span id="successRate">
+                                    {% if user.progress.challenges_attempted > 0 %}
+                                        {{ (user.progress.correct_solutions / user.progress.challenges_attempted * 100) | round(1) }}%
+                                    {% else %}
+                                        0%
+                                    {% endif %}
+                                </span></p>
+                                <p>Current Streak: <span id="streak">{{ user.progress.streak }}</span></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Challenge Status -->
+                <div id="challengeStatus" class="challenge-status" style="display: none;"></div>
+
+                <!-- Loading State -->
+                <div id="loadingState" class="loading">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Processing your submission...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let editor;
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Initialize CodeMirror
+    editor = CodeMirror.fromTextArea(document.getElementById('codeEditor'), {
+        mode: 'python',
+        theme: 'monokai',
+        lineNumbers: true,
+        autoCloseBrackets: true,
+        matchBrackets: true,
+        indentUnit: 4,
+        tabSize: 4,
+        indentWithTabs: false,
+        extraKeys: {"Tab": "indentMore", "Shift-Tab": "indentLess"}
+    });
+
+    // Language selection
+    document.getElementById('languageSelect').addEventListener('change', (e) => {
+        editor.setOption('mode', e.target.value);
+    });
+
+    // Clear code button
+    document.getElementById('clearCode').addEventListener('click', () => {
+        editor.setValue('');
+    });
+
+    // Chat form submission
+    document.getElementById('chatForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const messageInput = document.getElementById('messageInput');
+        const message = messageInput.value.trim();
+        
+        if (!message) return;
+        
+        // Add user message to chat
+        addMessageToChat(message, true);
+        messageInput.value = '';
+
+        try {
+            const response = await fetch('{{ url_for("chat") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({ message })
+            });
+
+            const data = await response.json();
+            if (data.response) {
+                addMessageToChat(data.response, false);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            addMessageToChat('Sorry, an error occurred. Please try again.', false);
+        }
+    });
+
+    // Submit solution
+    document.getElementById('submitSolution').addEventListener('click', async () => {
+        const code = editor.getValue();
+        const loadingState = document.getElementById('loadingState');
+        const challengeStatus = document.getElementById('challengeStatus');
+        
+        loadingState.classList.add('active');
+        challengeStatus.style.display = 'none';
+
+        try {
+            const response = await fetch('{{ url_for("submit_solution") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({
+                    code,
+                    challenge_id: 'current_challenge_id' // This should be dynamically set based on the current challenge
+                })
+            });
+
+            const data = await response.json();
+            updateChallengeStatus(data);
+        } catch (error) {
+            console.error('Error:', error);
+            updateChallengeStatus({ status: 'error', message: 'An error occurred. Please try again.' });
+        } finally {
+            loadingState.classList.remove('active');
+        }
+    });
+});
+
+function addMessageToChat(message, isUser) {
+    const chatMessages = document.getElementById('chatMessages');
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${isUser ? 'user-message' : 'ai-message'}`;
+    messageDiv.textContent = message;
+    chatMessages.appendChild(messageDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function updateChallengeStatus(data) {
+    const challengeStatus = document.getElementById('challengeStatus');
+    challengeStatus.style.display = 'block';
+    
+    if (data.status === 'success') {
+        challengeStatus.className = 'challenge-status status-success';
+        challengeStatus.innerHTML = `
+            <h5>Assessment Correct!</h5>
+            <p>${data.message}</p>
+            <button class="btn btn-primary" onclick="loadNextChallenge()">Next Challenge</button>
+        `;
+    } else {
+        challengeStatus.className = 'challenge-status status-error';
+        challengeStatus.innerHTML = `
+            <h5>Assessment Incorrect</h5>
+            <p>${data.message}</p>
+            <button class="btn btn-secondary me-2" onclick="tryAgain()">Try Again</button>
+            <button class="btn btn-info" onclick="getStepByStepSolution()">Get Step-by-Step Solution</button>
+        `;
+    }
+}
+
+function loadNextChallenge() {
+    // TODO: Implement loading next challenge
+}
+
+function tryAgain() {
+    document.getElementById('challengeStatus').style.display = 'none';
+}
+
+function getStepByStepSolution() {
+    // TODO: Implement getting step-by-step solution
+}
+</script>
+{% endblock %} 
